@@ -1,0 +1,280 @@
+-- Script de AppleScript para gestionar configuraciones con un menú interactivo ampliado
+
+on run
+	repeat
+		set opciones to {"Salir", "Modo Verbose", "Argumentos de Arranque", "Limpiar Cachés", "Extensiones del Kernel", "Aceleración Gráfica", "Restablecer NVRAM", "Ejecutar Diagnóstico", "Abrir TextEdit y Escribir 'Hola'", "Información del Sistema", "Gestionar Procesos", "Gestionar Servicios", "Comprobación del Disco"}
+		set opcionElegida to choose from list opciones with title "Gestor de Configuraciones Avanzado" with prompt "Seleccione una opción:" default items {"Modo Verbose"}
+		
+		if opcionElegida is false then
+			-- El usuario seleccionó "Cancelar" o cerró el diálogo
+			exit repeat
+		else if "Modo Verbose" is in opcionElegida then
+			toggleVerboseMode()
+		else if "Argumentos de Arranque" is in opcionElegida then
+			toggleBootArgs()
+		else if "Limpiar Cachés" is in opcionElegida then
+			cleanCaches()
+		else if "Extensiones del Kernel" is in opcionElegida then
+			manageKexts()
+		else if "Aceleración Gráfica" is in opcionElegida then
+			toggleGraphicsAcceleration()
+		else if "Restablecer NVRAM" is in opcionElegida then
+			resetNVRAM()
+		else if "Ejecutar Diagnóstico" is in opcionElegida then
+			runDiagnostics()
+		else if "Abrir TextEdit y Escribir 'Hola'" is in opcionElegida then
+			openTextEditAndWriteHello()
+		else if "Información del Sistema" is in opcionElegida then
+			showSystemInfo()
+		else if "Gestionar Procesos" is in opcionElegida then
+			manageProcesses()
+		else if "Gestionar Servicios" is in opcionElegida then
+			manageServices()
+		else if "Comprobación del Disco" is in opcionElegida then
+			checkDisk()
+		else if "Salir" is in opcionElegida then
+			exit repeat
+		end if
+	end repeat
+end run
+
+-- Función para activar/desactivar el modo Verbose
+on toggleVerboseMode()
+	try
+		set bootArgsActuales to do shell script "nvram boot-args"
+		if bootArgsActuales contains "-v" then
+			-- Desactivar modo Verbose
+			set nuevosBootArgs to do shell script "nvram boot-args | sed 's/ -v//'"
+			do shell script "sudo nvram boot-args=\"" & nuevosBootArgs & "\"" with administrator privileges
+			display notification "Modo Verbose desactivado." with title "Gestor de Configuraciones"
+		else
+			-- Activar modo Verbose
+			do shell script "sudo nvram boot-args=\"$(nvram boot-args | sed 's/boot-args[\\t ]*//') -v\"" with administrator privileges
+			display notification "Modo Verbose activado." with title "Gestor de Configuraciones"
+		end if
+	on error
+		-- No hay boot-args establecidos
+		do shell script "sudo nvram boot-args=\"-v\"" with administrator privileges
+		display notification "Modo Verbose activado." with title "Gestor de Configuraciones"
+	end try
+end toggleVerboseMode
+
+-- Función para activar/desactivar argumentos de arranque personalizados
+on toggleBootArgs()
+	set bootArgsActuales to ""
+	try
+		set bootArgsActuales to do shell script "nvram boot-args | sed 's/boot-args[\\t ]*//'"
+	end try
+	
+	if bootArgsActuales is not "" then
+		set respuesta to display dialog "Los boot-args actuales son:
+" & bootArgsActuales & "
+
+¿Desea eliminarlos?" buttons {"Cancelar", "Eliminar"} default button "Eliminar"
+		if button returned of respuesta is "Eliminar" then
+			do shell script "sudo nvram -d boot-args" with administrator privileges
+			display notification "Boot-args eliminados." with title "Gestor de Configuraciones"
+		end if
+	else
+		set nuevosBootArgs to text returned of (display dialog "Ingrese los nuevos boot-args:" default answer "")
+		if nuevosBootArgs is not "" then
+			do shell script "sudo nvram boot-args=\"" & nuevosBootArgs & "\"" with administrator privileges
+			display notification "Boot-args establecidos: " & nuevosBootArgs with title "Gestor de Configuraciones"
+		end if
+	end if
+end toggleBootArgs
+
+-- Función para limpiar cachés del sistema
+on cleanCaches()
+	set confirmacion to display dialog "Esta acción limpiará las cachés del sistema y puede requerir un reinicio.
+
+¿Desea continuar?" buttons {"Cancelar", "Limpiar"} default button "Limpiar"
+	if button returned of confirmacion is "Limpiar" then
+		try
+			do shell script "sudo rm -rf /Library/Caches/*" with administrator privileges
+			do shell script "sudo rm -rf /System/Library/Caches/*" with administrator privileges
+			do shell script "sudo rm -rf ~/Library/Caches/*"
+			display notification "Cachés del sistema limpiadas." with title "Gestor de Configuraciones"
+		on error errMsg
+			display dialog "Error al limpiar cachés:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end cleanCaches
+
+-- Función para gestionar extensiones del kernel
+on manageKexts()
+	set opcionesKexts to {"Volver", "Listar Kexts No Nativos", "Activar Kext", "Desactivar Kext"}
+	set accionKexts to choose from list opcionesKexts with title "Administrar Kexts" with prompt "Seleccione una acción:" default items {"Listar Kexts No Nativos"}
+	
+	if accionKexts is false or "Volver" is in accionKexts then
+		return
+	else if "Listar Kexts No Nativos" is in accionKexts then
+		-- Listar kexts no nativos
+		set listaKexts to do shell script "kextstat | grep -v com.apple"
+		display dialog "Extensiones del kernel no nativas:
+
+" & listaKexts buttons {"OK"} default button "OK"
+	else if "Activar Kext" is in accionKexts then
+		set rutaKext to choose file with prompt "Seleccione el kext que desea activar:" of type {"kext"}
+		if rutaKext is not false then
+			do shell script "sudo kextload \"" & POSIX path of rutaKext & "\"" with administrator privileges
+			display notification "Kext activado: " & name of rutaKext with title "Gestor de Configuraciones"
+		end if
+	else if "Desactivar Kext" is in accionKexts then
+		set rutaKext to choose file with prompt "Seleccione el kext que desea desactivar:" of type {"kext"}
+		if rutaKext is not false then
+			do shell script "sudo kextunload \"" & POSIX path of rutaKext & "\"" with administrator privileges
+			display notification "Kext desactivado: " & name of rutaKext with title "Gestor de Configuraciones"
+		end if
+	end if
+end manageKexts
+
+-- Función para aplicar/revertir parches de aceleración gráfica
+on toggleGraphicsAcceleration()
+	set opcionesGrafica to {"Volver", "Aplicar Parches", "Revertir Parches"}
+	set accionGrafica to choose from list opcionesGrafica with title "Aceleración Gráfica" with prompt "Seleccione una acción:" default items {"Aplicar Parches"}
+	
+	if accionGrafica is false or "Volver" is in accionGrafica then
+		return
+	else if "Aplicar Parches" is in accionGrafica then
+		-- Ejecutar OpenCore-Patcher para aplicar parches
+		set oclpPath to "/Applications/OpenCore-Patcher.app"
+		if do shell script "test -d \"" & oclpPath & "\" && echo exist || echo not_exist" contains "exist" then
+			do shell script "open -a \"" & oclpPath & "\" --args --postinstall" with administrator privileges
+			display notification "Parches aplicados. Reinicie su Mac." with title "Gestor de Configuraciones"
+		else
+			display dialog "OpenCore-Patcher.app no se encuentra en /Applications." buttons {"OK"} default button "OK"
+		end if
+	else if "Revertir Parches" is in accionGrafica then
+		display dialog "La reversión de parches requiere pasos manuales." buttons {"OK"} default button "OK"
+	end if
+end toggleGraphicsAcceleration
+
+-- Función para restablecer NVRAM
+on resetNVRAM()
+	set confirmacion to display dialog "¿Está seguro de que desea restablecer la NVRAM?" buttons {"Cancelar", "Restablecer"} default button "Cancelar"
+	if button returned of confirmacion is "Restablecer" then
+		do shell script "sudo nvram -c" with administrator privileges
+		display notification "NVRAM restablecida." with title "Gestor de Configuraciones"
+	end if
+end resetNVRAM
+
+-- Función para ejecutar diagnóstico
+on runDiagnostics()
+	display dialog "Para ejecutar el diagnóstico de hardware, reinicie su Mac y mantenga presionada la tecla 'D' durante el arranque." buttons {"OK"} default button "OK"
+end runDiagnostics
+
+-- Función para abrir TextEdit y escribir "Hola"
+on openTextEditAndWriteHello()
+	tell application "TextEdit"
+		activate
+		make new document with properties {text:"Hola"}
+	end tell
+end openTextEditAndWriteHello
+
+-- Función para mostrar información del sistema
+on showSystemInfo()
+	set sysInfo to do shell script "system_profiler SPHardwareDataType"
+	display dialog "Información del Sistema:
+
+" & sysInfo buttons {"OK"} default button "OK"
+end showSystemInfo
+
+-- Función para gestionar procesos
+on manageProcesses()
+	set opcionesProcesos to {"Volver", "Listar Procesos", "Finalizar Proceso"}
+	set accionProcesos to choose from list opcionesProcesos with title "Gestionar Procesos" with prompt "Seleccione una acción:" default items {"Listar Procesos"}
+	
+	if accionProcesos is false or "Volver" is in accionProcesos then
+		return
+	else if "Listar Procesos" is in accionProcesos then
+		set listaProcesos to do shell script "ps aux"
+		display dialog "Procesos Activos:
+
+" buttons {"Ver", "OK"} default button "OK"
+		if button returned of result is "Ver" then
+			tell application "TextEdit"
+				activate
+				make new document with properties {text:listaProcesos}
+			end tell
+		end if
+	else if "Finalizar Proceso" is in accionProcesos then
+		set pidProceso to text returned of (display dialog "Ingrese el PID del proceso a finalizar:" default answer "")
+		if pidProceso is not "" then
+			try
+				do shell script "sudo kill -9 " & pidProceso with administrator privileges
+				display notification "Proceso " & pidProceso & " finalizado." with title "Gestor de Configuraciones"
+			on error errMsg
+				display dialog "Error al finalizar el proceso:
+" & errMsg buttons {"OK"} default button "OK"
+			end try
+		end if
+	end if
+end manageProcesses
+
+-- Función para gestionar servicios y daemons
+on manageServices()
+	set opcionesServicios to {"Volver", "Listar Servicios", "Iniciar Servicio", "Detener Servicio"}
+	set accionServicios to choose from list opcionesServicios with title "Gestionar Servicios" with prompt "Seleccione una acción:" default items {"Listar Servicios"}
+	
+	if accionServicios is false or "Volver" is in accionServicios then
+		return
+	else if "Listar Servicios" is in accionServicios then
+		set listaServicios to do shell script "launchctl list"
+		display dialog "Servicios y Daemons:
+
+" buttons {"Ver", "OK"} default button "OK"
+		if button returned of result is "Ver" then
+			tell application "TextEdit"
+				activate
+				make new document with properties {text:listaServicios}
+			end tell
+		end if
+	else if "Iniciar Servicio" is in accionServicios then
+		set nombreServicio to text returned of (display dialog "Ingrese el nombre del servicio a iniciar:" default answer "")
+		if nombreServicio is not "" then
+			try
+				do shell script "sudo launchctl load -w /Library/LaunchDaemons/" & nombreServicio with administrator privileges
+				display notification "Servicio " & nombreServicio & " iniciado." with title "Gestor de Configuraciones"
+			on error errMsg
+				display dialog "Error al iniciar el servicio:
+" & errMsg buttons {"OK"} default button "OK"
+			end try
+		end if
+	else if "Detener Servicio" is in accionServicios then
+		set nombreServicio to text returned of (display dialog "Ingrese el nombre del servicio a detener:" default answer "")
+		if nombreServicio is not "" then
+			try
+				do shell script "sudo launchctl unload -w /Library/LaunchDaemons/" & nombreServicio with administrator privileges
+				display notification "Servicio " & nombreServicio & " detenido." with title "Gestor de Configuraciones"
+			on error errMsg
+				display dialog "Error al detener el servicio:
+" & errMsg buttons {"OK"} default button "OK"
+			end try
+		end if
+	end if
+end manageServices
+
+-- Función para realizar comprobación del disco
+on checkDisk()
+	set confirmacion to display dialog "Esta acción verificará el disco en busca de errores.
+Puede tardar varios minutos.
+
+¿Desea continuar?" buttons {"Cancelar", "Verificar"} default button "Verificar"
+	if button returned of confirmacion is "Verificar" then
+		try
+			-- Ejecutar el comando y capturar la salida
+			set diskResult to do shell script "diskutil verifyVolume /"
+			-- Mostrar los resultados en TextEdit
+			tell application "TextEdit"
+				activate
+				make new document with properties {text:diskResult}
+			end tell
+		on error errMsg
+			-- En caso de error, mostrar el mensaje de error
+			display dialog "Error durante la comprobación del disco:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end checkDisk
