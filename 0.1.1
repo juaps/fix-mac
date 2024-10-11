@@ -1,0 +1,504 @@
+-- Script de AppleScript para gestionar configuraciones con un menú interactivo actualizado
+
+on run
+	repeat
+		set opciones to {"Salir", "Diagnóstico", "Reparaciones", "Modo Verbose", "Argumentos de Arranque", "Información del Sistema", "Gestionar Procesos", "Gestionar Servicios", "Comprobación del Disco"}
+		set opcionElegida to choose from list opciones with title "Gestor de Configuraciones Avanzado" with prompt "Seleccione una opción:" default items {"Diagnóstico"}
+		
+		if opcionElegida is false then
+			-- El usuario seleccionó "Cancelar" o cerró el diálogo
+			exit repeat
+		else if "Diagnóstico" is in opcionElegida then
+			showDiagnosticMenu()
+		else if "Reparaciones" is in opcionElegida then
+			showRepairMenu()
+		else if "Modo Verbose" is in opcionElegida then
+			toggleVerboseMode()
+		else if "Argumentos de Arranque" is in opcionElegida then
+			toggleBootArgs()
+		else if "Información del Sistema" is in opcionElegida then
+			showSystemInfo()
+		else if "Gestionar Procesos" is in opcionElegida then
+			manageProcesses()
+		else if "Gestionar Servicios" is in opcionElegida then
+			manageServices()
+		else if "Comprobación del Disco" is in opcionElegida then
+			checkDisk()
+		else if "Salir" is in opcionElegida then
+			exit repeat
+		end if
+	end repeat
+end run
+
+-- Función para mostrar el submenú de diagnóstico
+on showDiagnosticMenu()
+	set opcionesDiagnostico to {"Volver", "Diagnóstico de Audio", "Diagnóstico de Video", "Diagnóstico de WiFi"}
+	set opcionDiagElegida to choose from list opcionesDiagnostico with title "Menú de Diagnóstico" with prompt "Seleccione una opción:" default items {"Diagnóstico de Audio"}
+	
+	if opcionDiagElegida is false or "Volver" is in opcionDiagElegida then
+		return
+	else if "Diagnóstico de Audio" is in opcionDiagElegida then
+		diagnoseAudio()
+	else if "Diagnóstico de Video" is in opcionDiagElegida then
+		diagnoseVideo()
+	else if "Diagnóstico de WiFi" is in opcionDiagElegida then
+		diagnoseWiFi()
+	end if
+end showDiagnosticMenu
+
+-- Función para mostrar el submenú de reparaciones
+on showRepairMenu()
+	set opcionesReparacion to {"Volver", "Reparar Audio", "Reiniciar WiFi", "Reparar WiFi Automáticamente", "Limpiar Cachés", "Restablecer NVRAM", "Aceleración Gráfica", "Extensiones del Kernel"}
+	set opcionRepararElegida to choose from list opcionesReparacion with title "Menú de Reparaciones" with prompt "Seleccione una opción:" default items {"Reparar Audio"}
+	
+	if opcionRepararElegida is false or "Volver" is in opcionRepararElegida then
+		return
+	else if "Reparar Audio" is in opcionRepararElegida then
+		repairAudio()
+	else if "Reiniciar WiFi" is in opcionRepararElegida then
+		resetWiFi()
+	else if "Reparar WiFi Automáticamente" is in opcionRepararElegida then
+		repairWiFiAutomated()
+	else if "Limpiar Cachés" is in opcionRepararElegida then
+		cleanCaches()
+	else if "Restablecer NVRAM" is in opcionRepararElegida then
+		resetNVRAM()
+	else if "Aceleración Gráfica" is in opcionRepararElegida then
+		toggleGraphicsAcceleration()
+	else if "Extensiones del Kernel" is in opcionRepararElegida then
+		manageKexts()
+	end if
+end showRepairMenu
+
+-- Función para diagnosticar Audio
+on diagnoseAudio()
+	display dialog "Este proceso recopilará información y logs relacionados con el sistema de audio para diagnóstico.
+Esto puede llevar unos minutos.
+
+¿Desea continuar?" buttons {"Cancelar", "Continuar"} default button "Continuar"
+	
+	if button returned of result is "Continuar" then
+		try
+			mostrarBarraProgreso("Recopilando información de audio...", 5)
+			-- Obtener información de audio
+			set audioInfo to do shell script "system_profiler SPAudioDataType"
+			-- Obtener logs de audio (última hora, información detallada)
+			set audioLogs to do shell script "log show --predicate 'subsystem == \"com.apple.audio\"' --info --debug --last 1h"
+			
+			-- Combinar información y logs
+			set diagnosticoAudio to "=== Información de Audio ===
+
+" & audioInfo & "
+
+=== Logs de Audio ===
+
+" & audioLogs
+			
+			-- Guardar en un archivo
+			set desktopPath to POSIX path of (path to desktop)
+			set logFile to desktopPath & "DiagnosticoAudio.txt"
+			do shell script "echo " & quoted form of diagnosticoAudio & " > " & quoted form of logFile
+			
+			display dialog "Diagnóstico de audio completado. El archivo 'DiagnosticoAudio.txt' se ha guardado en su escritorio." buttons {"OK"} default button "OK"
+		on error errMsg
+			display dialog "Error durante el diagnóstico de audio:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end diagnoseAudio
+
+-- Función para diagnosticar Video
+on diagnoseVideo()
+	display dialog "Este proceso recopilará información y logs relacionados con el sistema de video para diagnóstico.
+Esto puede llevar unos minutos.
+
+¿Desea continuar?" buttons {"Cancelar", "Continuar"} default button "Continuar"
+	
+	if button returned of result is "Continuar" then
+		try
+			mostrarBarraProgreso("Recopilando información de video...", 5)
+			-- Obtener información de gráficos
+			set videoInfo to do shell script "system_profiler SPDisplaysDataType"
+			-- Obtener logs de gráficos (última hora, información detallada)
+			set videoLogs to do shell script "log show --predicate 'process == \"WindowServer\"' --info --debug --last 1h"
+			
+			-- Combinar información y logs
+			set diagnosticoVideo to "=== Información de Video ===
+
+" & videoInfo & "
+
+=== Logs de Video ===
+
+" & videoLogs
+			
+			-- Guardar en un archivo
+			set desktopPath to POSIX path of (path to desktop)
+			set logFile to desktopPath & "DiagnosticoVideo.txt"
+			do shell script "echo " & quoted form of diagnosticoVideo & " > " & quoted form of logFile
+			
+			display dialog "Diagnóstico de video completado. El archivo 'DiagnosticoVideo.txt' se ha guardado en su escritorio." buttons {"OK"} default button "OK"
+		on error errMsg
+			display dialog "Error durante el diagnóstico de video:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end diagnoseVideo
+
+-- Función para diagnosticar WiFi
+-- Función para diagnosticar problemas de WiFi
+on diagnoseWiFi()
+	display dialog "Este proceso recopilará información y logs relacionados con el WiFi para diagnóstico.
+Esto puede llevar unos minutos.
+
+¿Desea continuar?" buttons {"Cancelar", "Continuar"} default button "Continuar"
+	
+	if button returned of result is "Continuar" then
+		try
+			mostrarBarraProgreso("Recopilando información de WiFi...", 5)
+			
+			-- Obtener información de WiFi
+			set wifiInfo to do shell script "system_profiler SPNetworkDataType | awk '/Wi-Fi:/,/Hardware (VoIP):/'"
+			
+			-- Obtener logs de WiFi
+			set wifiLogs to do shell script "log show --predicate 'subsystem == \"com.apple.wifi\"' --info --last 1h"
+			
+			-- Verificar conflictos de código de país
+			set countryCodeConflicts to do shell script "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -s | awk '{print $7}' | sort | uniq -c"
+			
+			-- Verificar congestión del canal
+			set channelCongestion to do shell script "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -s | awk '{print $3}' | sort | uniq -c"
+			
+			-- Verificar estado de AWDL
+			set awdlStatus to do shell script "ifconfig awdl0"
+			
+			-- Verificar asignación de direcciones IPv4 e IPv6
+			set ipAssignment to do shell script "networksetup -getinfo Wi-Fi"
+			
+			-- Combinar toda la información
+			set diagnosticoWiFi to "=== Información de WiFi ===" & "
+
+" & wifiInfo & "
+
+"
+			set diagnosticoWiFi to diagnosticoWiFi & "=== Logs de WiFi ===" & "
+
+" & wifiLogs & "
+
+"
+			set diagnosticoWiFi to diagnosticoWiFi & "=== Conflictos de Código de País ===" & "
+
+" & countryCodeConflicts & "
+
+"
+			set diagnosticoWiFi to diagnosticoWiFi & "=== Congestión del Canal ===" & "
+
+" & channelCongestion & "
+
+"
+			set diagnosticoWiFi to diagnosticoWiFi & "=== Estado de AWDL ===" & "
+
+" & awdlStatus & "
+
+"
+			set diagnosticoWiFi to diagnosticoWiFi & "=== Asignación de Direcciones IPv4 e IPv6 ===" & "
+
+" & ipAssignment & "
+
+"
+			
+			-- Mostrar los resultados en TextEdit
+			tell application "TextEdit"
+				activate
+				make new document with properties {text:diagnosticoWiFi}
+			end tell
+			
+			-- Guardar los resultados en un archivo
+			set desktopPath to (POSIX path of (path to desktop))
+			set logFile to desktopPath & "DiagnosticoWiFiCompleto.txt"
+			do shell script "echo " & quoted form of diagnosticoWiFi & " > " & quoted form of logFile
+			
+			display dialog "Diagnóstico de WiFi completado. La información y los logs se han guardado en TextEdit y en el archivo 'DiagnosticoWiFiCompleto.txt' en su escritorio." buttons {"OK"} default button "OK"
+		on error errMsg
+			display dialog "Error durante el proceso de diagnóstico del WiFi:" & "
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end diagnoseWiFi
+
+-- Función para mostrar la barra de progreso
+on mostrarBarraProgreso(mensaje, segundos)
+	set ventanaProgreso to display dialog mensaje & "
+Por favor, espere..." buttons {"Cancelar"} giving up after segundos with title "Progreso"
+	
+	if gave up of ventanaProgreso is false then
+		error "El proceso fue cancelado por el usuario."
+	end if
+end mostrarBarraProgreso
+
+-- Función para intentar reparar el sistema de audio de la Mac y automatizar la solución de problemas
+on repairAudio()
+	display dialog "Este proceso intentará reparar automáticamente el sistema de audio de su Mac y restaurar los parlantes internos.
+Esto puede llevar unos minutos.
+
+¿Desea continuar?" buttons {"Cancelar", "Reparar"} default button "Reparar"
+	
+	if button returned of result is "Reparar" then
+		try
+			-- Descargar y restablecer el controlador de audio
+			do shell script "sudo killall coreaudiod" with administrator privileges
+			mostrarBarraProgreso("Reiniciando coreaudiod...", 5)
+			
+			-- Eliminar preferencias de audio para evitar configuraciones corruptas
+			do shell script "sudo rm -rf /Library/Preferences/Audio/*" with administrator privileges
+			mostrarBarraProgreso("Eliminando preferencias de audio...", 5)
+			
+			-- Reiniciar el controlador de audio
+			do shell script "sudo launchctl kickstart -k system/com.apple.audio.coreaudiod" with administrator privileges
+			mostrarBarraProgreso("Reiniciando y forzando la detección de hardware de audio...", 5)
+			
+			-- Verificar si los parlantes internos están seleccionados como dispositivo de salida
+			set outputDevices to do shell script "system_profiler SPAudioDataType | grep 'Output Device'"
+			if outputDevices contains "Internal Speaker" or outputDevices contains "Altavoces internos" then
+				display dialog "Reparación completada correctamente. Los parlantes internos han sido detectados." buttons {"OK"} default button "OK"
+			else
+				display dialog "Reparación completada, pero los parlantes internos aún no se detectan. Por favor, revise la configuración de salida de sonido en Preferencias del Sistema." buttons {"OK"} default button "OK"
+			end if
+		on error errMsg
+			display dialog "Error durante el proceso de reparación del audio:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end repairAudio
+
+-- Función para reiniciar el WiFi con barra de progreso
+on resetWiFi()
+	display dialog "Este proceso reiniciará el WiFi, limpiará la caché de WiFi y volverá a conectarlo.
+Esto puede llevar unos minutos.
+
+¿Desea continuar?" buttons {"Cancelar", "Reiniciar"} default button "Reiniciar"
+	
+	if button returned of result is "Reiniciar" then
+		try
+			-- Obtener la interfaz WiFi
+			set wifiInterface to do shell script "networksetup -listallhardwareports | awk '/Wi-Fi/{getline; print $2}'"
+			
+			-- Apagar WiFi
+			do shell script "networksetup -setairportpower " & wifiInterface & " off" with administrator privileges
+			mostrarBarraProgreso("Apagando WiFi...", 3)
+			
+			-- Limpiar caché de WiFi
+			do shell script "sudo rm -rf /Library/Preferences/SystemConfiguration/com.apple.airport.preferences.plist" with administrator privileges
+			do shell script "sudo rm -rf /Library/Preferences/SystemConfiguration/NetworkInterfaces.plist" with administrator privileges
+			do shell script "sudo rm -rf /Library/Preferences/SystemConfiguration/preferences.plist" with administrator privileges
+			mostrarBarraProgreso("Limpiando caché de WiFi...", 5)
+			
+			-- Encender WiFi
+			do shell script "networksetup -setairportpower " & wifiInterface & " on" with administrator privileges
+			mostrarBarraProgreso("Encendiendo WiFi...", 3)
+			
+			display dialog "WiFi reiniciado correctamente." buttons {"OK"} default button "OK"
+		on error errMsg
+			display dialog "Error durante el proceso de reinicio de WiFi:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end resetWiFi
+
+-- Función para reparar el WiFi automáticamente
+on repairWiFiAutomated()
+	display dialog "Este proceso intentará reparar automáticamente la conexión WiFi de su Mac. Esto puede llevar unos minutos.
+
+¿Desea continuar?" buttons {"Cancelar", "Reparar"} default button "Reparar"
+	
+	if button returned of result is "Reparar" then
+		try
+			mostrarBarraProgreso("Reparando WiFi...", 5)
+			-- Determinar la interfaz WiFi
+			set wifiInterface to do shell script "networksetup -listallhardwareports | awk '/Wi-Fi/{getline; print $2}'"
+			
+			-- Apagar WiFi
+			do shell script "networksetup -setairportpower " & wifiInterface & " off" with administrator privileges
+			mostrarBarraProgreso("Apagando WiFi...", 3)
+			
+			-- Encender WiFi
+			do shell script "networksetup -setairportpower " & wifiInterface & " on" with administrator privileges
+			mostrarBarraProgreso("Encendiendo WiFi...", 3)
+			
+			-- Verificar si la conexión se ha restablecido
+			set wifiStatus to do shell script "networksetup -getairportpower " & wifiInterface
+			if wifiStatus contains "On" then
+				set connectionStatus to do shell script "networksetup -getinfo Wi-Fi"
+				if connectionStatus contains "IP address: 169." then
+					display dialog "La conexión WiFi no se estableció correctamente. Intentando un segundo método..." buttons {"OK"} default button "OK"
+					
+					-- Intento 2: Restablecer la configuración DHCP y reiniciar el servicio
+					do shell script "sudo ipconfig set " & wifiInterface & " DHCP" with administrator privileges
+					mostrarBarraProgreso("Restableciendo configuración DHCP...", 5)
+					
+					-- Verificar nuevamente la conexión
+					set connectionStatus to do shell script "networksetup -getinfo Wi-Fi"
+					if connectionStatus contains "IP address: 169." then
+						display dialog "La conexión WiFi aún no se ha establecido correctamente. Por favor, verifique manualmente la conexión." buttons {"OK"} default button "OK"
+					else
+						display dialog "Reparación completada correctamente. La conexión WiFi ha sido restablecida." buttons {"OK"} default button "OK"
+					end if
+				else
+					display dialog "Reparación completada correctamente. La conexión WiFi ha sido restablecida." buttons {"OK"} default button "OK"
+				end if
+			else
+				display dialog "Reparación completada, pero el WiFi aún no se ha conectado correctamente. Intentando un segundo método..." buttons {"OK"} default button "OK"
+				
+				-- Intento 2: Reiniciar el controlador mDNSResponder
+				do shell script "sudo killall -HUP mDNSResponder" with administrator privileges
+				mostrarBarraProgreso("Reiniciando mDNSResponder...", 5)
+				
+				display dialog "Intento de reparación completado. Por favor, intente conectarse nuevamente a la red WiFi." buttons {"OK"} default button "OK"
+			end if
+		on error errMsg
+			display dialog "Error durante el proceso de reparación del WiFi:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end repairWiFiAutomated
+
+-- Función para activar/desactivar el modo Verbose con barra de progreso
+on toggleVerboseMode()
+	try
+		set bootArgsActuales to do shell script "nvram boot-args"
+		if bootArgsActuales contains "-v" then
+			set nuevosBootArgs to do shell script "nvram boot-args | sed 's/ -v//'"
+			do shell script "sudo nvram boot-args=\"" & nuevosBootArgs & "\"" with administrator privileges
+			mostrarBarraProgreso("Desactivando Modo Verbose...", 2)
+			display dialog "Modo Verbose desactivado correctamente." buttons {"OK"} default button "OK"
+		else
+			do shell script "sudo nvram boot-args=\"$(nvram boot-args | sed 's/boot-args[	 ]*//') -v\"" with administrator privileges
+			mostrarBarraProgreso("Activando Modo Verbose...", 2)
+			display dialog "Modo Verbose activado correctamente." buttons {"OK"} default button "OK"
+		end if
+	on error errMsg
+		display dialog "Error al cambiar el Modo Verbose:
+" & errMsg buttons {"OK"} default button "OK"
+	end try
+end toggleVerboseMode
+
+-- Función para limpiar las cachés del sistema con barra de progreso
+on cleanCaches()
+	set confirmacion to display dialog "Esta acción limpiará las cachés del sistema y puede requerir un reinicio.
+
+¿Desea continuar?" buttons {"Cancelar", "Limpiar"} default button "Limpiar"
+	if button returned of confirmacion is "Limpiar" then
+		try
+			do shell script "sudo rm -rf /Library/Caches/*" with administrator privileges
+			mostrarBarraProgreso("Limpiando cachés del sistema...", 5)
+			do shell script "sudo rm -rf /System/Library/Caches/*" with administrator privileges
+			mostrarBarraProgreso("Limpiando cachés del sistema...", 5)
+			do shell script "rm -rf ~/Library/Caches/*"
+			mostrarBarraProgreso("Limpiando cachés del usuario...", 3)
+			display dialog "Cachés limpiadas correctamente." buttons {"OK"} default button "OK"
+		on error errMsg
+			display dialog "Error al limpiar las cachés:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end cleanCaches
+
+-- Función para aplicar/revertir parches de aceleración gráfica con barra de progreso
+on toggleGraphicsAcceleration()
+	set opcionesGrafica to {"Volver", "Aplicar Parches", "Revertir Parches"}
+	set accionGrafica to choose from list opcionesGrafica with title "Aceleración Gráfica" with prompt "Seleccione una acción:" default items {"Aplicar Parches"}
+	
+	if accionGrafica is false or "Volver" is in accionGrafica then
+		return
+	else if "Aplicar Parches" is in accionGrafica then
+		set oclpPath to "/Applications/OpenCore-Patcher.app"
+		if do shell script "test -d \"" & oclpPath & "\" && echo exist || echo not_exist" contains "exist" then
+			do shell script "open -a \"" & oclpPath & "\" --args --postinstall" with administrator privileges
+			mostrarBarraProgreso("Aplicando parches de aceleración gráfica...", 10)
+			display dialog "Parches aplicados correctamente. Reinicie su Mac." buttons {"OK"} default button "OK"
+		else
+			display dialog "OpenCore-Patcher.app no se encuentra en /Applications." buttons {"OK"} default button "OK"
+		end if
+	else if "Revertir Parches" is in accionGrafica then
+		mostrarBarraProgreso("Revirtiendo parches de aceleración gráfica...", 10)
+		display dialog "La reversión de parches requiere pasos manuales." buttons {"OK"} default button "OK"
+	end if
+end toggleGraphicsAcceleration
+
+-- Función para restablecer NVRAM con barra de progreso
+on resetNVRAM()
+	set confirmacion to display dialog "Esta acción restablecerá la NVRAM de su Mac.
+
+¿Desea continuar?" buttons {"Cancelar", "Restablecer"} default button "Restablecer"
+	if button returned of confirmacion is "Restablecer" then
+		try
+			do shell script "sudo nvram -c" with administrator privileges
+			mostrarBarraProgreso("Restableciendo NVRAM...", 5)
+			display dialog "NVRAM restablecida correctamente." buttons {"OK"} default button "OK"
+		on error errMsg
+			display dialog "Error al restablecer la NVRAM:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end resetNVRAM
+
+-- Función para abrir TextEdit y escribir "Hola" con barra de progreso
+on openTextEditAndWriteHello()
+	mostrarBarraProgreso("Abriendo TextEdit...", 2)
+	tell application "TextEdit"
+		activate
+		make new document with properties {text:"Hola"}
+	end tell
+	display dialog "TextEdit abierto y mensaje escrito correctamente." buttons {"OK"} default button "OK"
+end openTextEditAndWriteHello
+
+-- Función para mostrar información del sistema con barra de progreso
+on showSystemInfo()
+	mostrarBarraProgreso("Obteniendo información del sistema...", 3)
+	set sysInfo to do shell script "system_profiler SPHardwareDataType"
+	display dialog "Información del Sistema:
+
+" & sysInfo buttons {"OK"} default button "OK"
+end showSystemInfo
+
+-- Función para gestionar procesos con barra de progreso
+on manageProcesses()
+	mostrarBarraProgreso("Listando procesos activos...", 3)
+	set listaProcesos to do shell script "ps aux"
+	tell application "TextEdit"
+		activate
+		make new document with properties {text:listaProcesos}
+	end tell
+	display dialog "Procesos listados correctamente." buttons {"OK"} default button "OK"
+end manageProcesses
+
+-- Función para gestionar servicios y daemons con barra de progreso
+on manageServices()
+	mostrarBarraProgreso("Listando servicios y daemons...", 3)
+	set listaServicios to do shell script "launchctl list"
+	tell application "TextEdit"
+		activate
+		make new document with properties {text:listaServicios}
+	end tell
+	display dialog "Servicios y daemons listados correctamente." buttons {"OK"} default button "OK"
+end manageServices
+
+-- Función para comprobación del disco con barra de progreso
+on checkDisk()
+	set confirmacion to display dialog "Esta acción verificará el disco en busca de errores. Puede tardar varios minutos.
+
+¿Desea continuar?" buttons {"Cancelar", "Verificar"} default button "Verificar"
+	if button returned of confirmacion is "Verificar" then
+		try
+			mostrarBarraProgreso("Verificando el disco...", 10)
+			set diskResult to do shell script "diskutil verifyVolume /"
+			tell application "TextEdit"
+				activate
+				make new document with properties {text:diskResult}
+			end tell
+			display dialog "Verificación del disco completada." buttons {"OK"} default button "OK"
+		on error errMsg
+			display dialog "Error durante la verificación del disco:
+" & errMsg buttons {"OK"} default button "OK"
+		end try
+	end if
+end checkDisk
